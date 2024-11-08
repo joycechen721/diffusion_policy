@@ -9,10 +9,9 @@ shape_meta: &shape_meta
     robot0_eye_in_hand_image:
       shape: [3, 128, 128]
       type: rgb
-    robot0_eef_pos:
+    robot0_base_to_eef_pos:
       shape: [3]
-      # type default: low_dim
-    robot0_eef_quat:
+    robot0_base_to_eef_quat:
       shape: [4]
     robot0_gripper_qpos:
       shape: [2]
