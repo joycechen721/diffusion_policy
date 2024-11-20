@@ -95,6 +95,10 @@ class DiffusionTransformerHybridImagePolicy(BaseImagePolicy):
                         modality.obs_randomizer_kwargs.crop_height = ch
                         modality.obs_randomizer_kwargs.crop_width = cw
 
+        if "lang_emb" in obs_config['low_dim']:
+            config.observation.encoder.rgb.core_class = "VisualCoreLanguageConditioned"
+            config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18ConvFiLM"
+        
         # init global state
         ObsUtils.initialize_obs_utils_with_config(config)
 

@@ -5,6 +5,8 @@ import gym
 from gym import spaces
 from omegaconf import OmegaConf
 from robomimic.envs.env_robosuite import EnvRobosuite
+from robomimic.macros import LANG_EMB_KEY
+from robomimic.utils.lang_utils import LangEncoder
 
 class RobomimicImageWrapper(gym.Env):
     def __init__(self, 
@@ -22,6 +24,9 @@ class RobomimicImageWrapper(gym.Env):
         self.shape_meta = shape_meta
         self.render_cache = None
         self.has_reset_before = False
+        self.lang = None
+        self.lang_emb = None
+        self.lang_encoder = LangEncoder('cpu')
         
         # setup spaces
         action_shape = shape_meta['action']['shape']
@@ -46,6 +51,8 @@ class RobomimicImageWrapper(gym.Env):
             elif key.endswith('pos'):
                 # better range?
                 min_value, max_value = -1, 1
+            elif key == LANG_EMB_KEY:
+                min_value, max_value = -100, 100
             else:
                 raise RuntimeError(f"Unsupported type {key}")
             
@@ -62,6 +69,8 @@ class RobomimicImageWrapper(gym.Env):
     def get_observation(self, raw_obs=None):
         if raw_obs is None:
             raw_obs = self.env.get_observation()
+        assert self.lang is not None
+        raw_obs[LANG_EMB_KEY] = self.lang_emb
         
         self.render_cache = raw_obs[self.render_obs_key]
 
@@ -101,6 +110,8 @@ class RobomimicImageWrapper(gym.Env):
         #     # random reset
         #     raw_obs = self.env.reset()
         raw_obs = self.env.reset()
+        self.lang = self.env._ep_lang_str
+        self.lang_emb = self.lang_encoder.get_lang_emb(self.lang).numpy()
         # return obs
         obs = self.get_observation(raw_obs)
         return obs
