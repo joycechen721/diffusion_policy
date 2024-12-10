@@ -168,8 +168,12 @@ class TrainDiffusionTransformerHybridWorkspace(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
+                max_train_steps = cfg.training.max_train_steps
+                tqdm_kwargs = {}
+                if max_train_steps is not None:
+                    tqdm_kwargs["total"] = max_train_steps
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
-                        leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
+                        leave=False, mininterval=cfg.training.tqdm_interval_sec, **tqdm_kwargs) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
                         # device transfer
                         batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))

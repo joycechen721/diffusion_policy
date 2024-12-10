@@ -38,7 +38,7 @@ policy:
   n_obs_steps: ${n_obs_steps}
   num_inference_steps: 100
 
-  crop_shape: [76, 76]
+  crop_shape: [116, 116]
   obs_encoder_group_norm: True
   eval_fixed_crop: True
 
@@ -92,25 +92,25 @@ training:
   lr_scheduler: cosine
   # Transformer needs LR warmup
   lr_warmup_steps: 1000
-  num_epochs: 50
+  num_epochs: 3000
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
   use_ema: True
   # training loop control
   # in epochs
-  rollout_every: 5
-  checkpoint_every: 5
-  val_every: 5
-  sample_every: 5
+  rollout_every: 100
+  checkpoint_every: 200
+  val_every: 50
+  sample_every: 50
   # steps per epoch
-  max_train_steps: null
+  max_train_steps: 500
   max_val_steps: null
   # misc
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: diffusion_policy_window10_horizon25
   resume: True
   mode: online
   name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}

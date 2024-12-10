@@ -29,6 +29,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             n_obs_steps,
             num_inference_steps=None,
             obs_as_global_cond=True,
+            vision_backbone="resnet18",
             crop_shape=(76, 76),
             diffusion_step_embed_dim=256,
             down_dims=(256,512,1024),
@@ -87,6 +88,24 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
                     if modality.obs_randomizer_class == 'CropRandomizer':
                         modality.obs_randomizer_kwargs.crop_height = ch
                         modality.obs_randomizer_kwargs.crop_width = cw
+
+        if vision_backbone == "resnet18":
+            config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
+        elif vision_backbone == "resnet34":
+            config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet34Conv"
+        elif vision_backbone == "resnet50":
+            config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet50Conv"
+
+        if "lang_emb" in obs_config['low_dim']:
+            config.observation.encoder.rgb.core_class = "VisualCoreLanguageConditioned"
+            if vision_backbone == "resnet18":
+                config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18ConvFiLM"
+            elif vision_backbone == "resnet34":
+                config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet34ConvFiLM"
+            elif vision_backbone == "resnet50":
+                config.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet50ConvFiLM"
+            else:
+                raise NotImplementedError
 
         # init global state
         ObsUtils.initialize_obs_utils_with_config(config)

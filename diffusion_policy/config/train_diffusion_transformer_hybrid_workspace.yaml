@@ -38,6 +38,8 @@ policy:
   n_obs_steps: ${n_obs_steps}
   num_inference_steps: 100
 
+  vision_backbone: resnet18
+
   crop_shape: [116, 116]
   obs_encoder_group_norm: True
   eval_fixed_crop: True
@@ -92,7 +94,7 @@ training:
   lr_scheduler: cosine
   # Transformer needs LR warmup
   lr_warmup_steps: 1000
-  num_epochs: 1000
+  num_epochs: 3000
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -110,7 +112,7 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: diffusion_policy
   resume: True
   mode: online
   name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}

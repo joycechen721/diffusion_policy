@@ -68,13 +68,24 @@ class TrainDiffusionUnetHybridWorkspace(BaseWorkspace):
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
 
+        
+        if "ckpt_path" in cfg.task and cfg.task.ckpt_path is not None:
+            print(f"Initializing from checkpoint {cfg.task.ckpt_path}")
+            self.load_checkpoint(path=cfg.task.ckpt_path)
+
         # configure dataset
         dataset: BaseImageDataset
         dataset = hydra.utils.instantiate(cfg.task.dataset)
         assert isinstance(dataset, BaseImageDataset)
-        train_dataloader = DataLoader(dataset, **cfg.dataloader)
+        dataloader_cfg = copy.deepcopy(OmegaConf.to_container(cfg.dataloader))
+        if hasattr(dataset, "get_dataset_sampler"):
+            sampler = dataset.get_dataset_sampler()
+            if sampler is not None:
+                dataloader_cfg["sampler"] = sampler
+                dataloader_cfg["shuffle"] = False
+                print("using custom dataloader sampler")
+        train_dataloader = DataLoader(dataset, **dataloader_cfg)
         normalizer = dataset.get_normalizer()
-
         # configure validation dataset
         val_dataset = dataset.get_validation_dataset()
         val_dataloader = DataLoader(val_dataset, **cfg.val_dataloader)
@@ -83,14 +94,17 @@ class TrainDiffusionUnetHybridWorkspace(BaseWorkspace):
         if cfg.training.use_ema:
             self.ema_model.set_normalizer(normalizer)
 
+        if cfg.training.max_train_steps is None:
+            num_training_steps = (len(train_dataloader) * cfg.training.num_epochs) // cfg.training.gradient_accumulate_every
+        else:
+            num_training_steps = (cfg.training.max_train_steps * cfg.training.num_epochs) // cfg.training.gradient_accumulate_every
+
         # configure lr scheduler
         lr_scheduler = get_scheduler(
             cfg.training.lr_scheduler,
             optimizer=self.optimizer,
             num_warmup_steps=cfg.training.lr_warmup_steps,
-            num_training_steps=(
-                len(train_dataloader) * cfg.training.num_epochs) \
-                    // cfg.training.gradient_accumulate_every,
+            num_training_steps=num_training_steps,
             # pytorch assumes stepping LRScheduler every epoch
             # however huggingface diffusers steps it every batch
             last_epoch=self.global_step-1
@@ -154,8 +168,14 @@ class TrainDiffusionUnetHybridWorkspace(BaseWorkspace):
                 step_log = dict()
                 # ========= train for this epoch ==========
                 train_losses = list()
+                
+                max_train_steps = cfg.training.max_train_steps
+                tqdm_kwargs = {}
+                if max_train_steps is not None:
+                    tqdm_kwargs["total"] = max_train_steps
+                
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
-                        leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
+                        leave=False, mininterval=cfg.training.tqdm_interval_sec, **tqdm_kwargs) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
                         # device transfer
                         batch = dict_apply(batch, lambda x: x.to(device, non_blocking=True))
@@ -211,7 +231,7 @@ class TrainDiffusionUnetHybridWorkspace(BaseWorkspace):
                 policy.eval()
 
                 # run rollout
-                if (self.epoch % cfg.training.rollout_every) == 0:
+                if self.epoch > 0 and (self.epoch % cfg.training.rollout_every) == 0:
                     runner_log = env_runner.run(policy)
                     # log all
                     step_log.update(runner_log)
@@ -254,7 +274,7 @@ class TrainDiffusionUnetHybridWorkspace(BaseWorkspace):
                         del mse
                 
                 # checkpoint
-                if (self.epoch % cfg.training.checkpoint_every) == 0:
+                if self.epoch > 0 and (self.epoch % cfg.training.checkpoint_every) == 0:
                     # checkpointing
                     if cfg.checkpoint.save_last_ckpt:
                         self.save_checkpoint()
