@@ -400,3 +400,19 @@ class RobomimicImageRunner(BaseImageRunner):
             uaction = uaction.reshape(*raw_shape[:-1], 14)
 
         return uaction
+
+    def close(self):
+        env_list = self.env.envs
+        for env in env_list:
+            env_chain = [env]
+            while True:
+                if hasattr(env, "env"):
+                    env = env.env
+                else:
+                    break
+                env_chain = [env] + env_chain
+            
+            for env in env_chain:
+                if hasattr(env, "close"):
+                    env.close()
+                del env

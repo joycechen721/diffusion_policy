@@ -117,13 +117,14 @@ class TrainDiffusionTransformerHybridWorkspace(BaseWorkspace):
                 cfg.ema,
                 model=self.ema_model)
 
-        # configure env
-        if cfg.training.rollout_every is not None:
-            env_runner: BaseImageRunner
-            env_runner = hydra.utils.instantiate(
-                cfg.task.env_runner,
-                output_dir=self.output_dir)
-            assert isinstance(env_runner, BaseImageRunner)
+        ### Soroush: this part is removed, created dynamically when needed and closed
+        # # configure env
+        # if cfg.training.rollout_every is not None:
+        #     env_runner: BaseImageRunner
+        #     env_runner = hydra.utils.instantiate(
+        #         cfg.task.env_runner,
+        #         output_dir=self.output_dir)
+        #     assert isinstance(env_runner, BaseImageRunner)
 
         # configure logging
         wandb_run = wandb.init(
@@ -232,9 +233,19 @@ class TrainDiffusionTransformerHybridWorkspace(BaseWorkspace):
                 # run rollout
                 if cfg.training.rollout_every is not None:
                     if self.epoch > 0 and (self.epoch % cfg.training.rollout_every) == 0:
+                        env_runner: BaseImageRunner
+                        env_runner = hydra.utils.instantiate(
+                            cfg.task.env_runner,
+                            output_dir=self.output_dir)
+                        assert isinstance(env_runner, BaseImageRunner)
+
                         runner_log = env_runner.run(policy)
                         # log all
                         step_log.update(runner_log)
+
+                        # close and discard env_runner
+                        env_runner.close()
+                        del env_runner
 
                 # run validation
                 if (self.epoch % cfg.training.val_every) == 0:
