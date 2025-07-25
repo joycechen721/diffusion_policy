@@ -116,6 +116,7 @@ class RobomimicImageWrapper(gym.Env):
         raw_obs = self.env.reset()
         self.lang = self.env._ep_lang_str
         self.lang_emb = self.lang_encoder.get_lang_emb(self.lang).numpy()
+
         # return obs
         obs = self.get_observation(raw_obs)
         return obs

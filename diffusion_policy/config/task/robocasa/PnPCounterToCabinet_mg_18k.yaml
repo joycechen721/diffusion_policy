@@ -25,15 +25,15 @@ shape_meta: &shape_meta
 
 dataset_paths: &dataset_paths [
   # mg-1k demos
-  '/mnt/nfs_client/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-15-05-32/demo_im128.hdf5',
-  '/mnt/nfs_client/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-20-17-06/demo_im128.hdf5',
+  '/data2/abhim/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-20-17-06/demo_im128.hdf5',
+  '/data2/abhim/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-15-05-32/demo_im128.hdf5',
 ]
 
 abs_action: &abs_action False
 
 env_runner:
   _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
-  dataset_path: /mnt/nfs_client/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-15-05-32/demo_im128.hdf5
+  dataset_path: /data2/abhim/robocasa/datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-18-20-17-06/demo_im128.hdf5
   shape_meta: *shape_meta
   # costs 1GB per env
   n_train: 0
@@ -51,7 +51,7 @@ env_runner:
   past_action: ${past_action_visible}
   abs_action: *abs_action
   tqdm_interval_sec: 1.0
-  n_envs: 1
+  n_envs: 5
   env_kwargs:
     seed: 1111111
     obj_instance_split: 'train'

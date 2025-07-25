@@ -15,6 +15,7 @@ from diffusion_policy.gym_util.multistep_wrapper import MultiStepWrapper
 from diffusion_policy.gym_util.video_recording_wrapper import VideoRecordingWrapper, VideoRecorder
 from diffusion_policy.model.common.rotation_transformer import RotationTransformer
 from omegaconf import OmegaConf
+from functools import partial
 
 from diffusion_policy.policy.base_image_policy import BaseImagePolicy
 from diffusion_policy.common.pytorch_util import dict_apply
@@ -31,6 +32,13 @@ import robocasa
 #                 "randomize_cameras": False,
 #                 "obj_instance_split": "B",
 #             }
+
+
+# these lines necessary to prevent all the CPU cores being taken up
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 
 def create_env(env_meta, shape_meta, enable_render=True):
@@ -100,7 +108,10 @@ class RobomimicImageRunner(BaseImageRunner):
             env_meta['env_kwargs']['controller_configs']['control_delta'] = False
             rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
 
-        def env_fn():
+        def env_fn(env_i):
+            # set seed for env appropriately
+            if "seed" in env_meta["env_kwargs"]:
+                env_meta["env_kwargs"]["seed"] += env_i
             robomimic_env = create_env(
                 env_meta=env_meta, 
                 shape_meta=shape_meta
@@ -139,10 +150,10 @@ class RobomimicImageRunner(BaseImageRunner):
         # is needed to initialize spaces.
         def dummy_env_fn():
             robomimic_env = create_env(
-                    env_meta=env_meta, 
-                    shape_meta=shape_meta,
-                    enable_render=False
-                )
+                env_meta=env_meta, 
+                shape_meta=shape_meta,
+                enable_render=False
+            )
             return MultiStepWrapper(
                 VideoRecordingWrapper(
                     RobomimicImageWrapper(
@@ -167,7 +178,7 @@ class RobomimicImageRunner(BaseImageRunner):
                 max_episode_steps=max_steps
             )
 
-        env_fns = [env_fn] * n_envs
+        env_fns = [partial(env_fn, env_i) for env_i in range(n_envs)]
         env_seeds = list()
         env_prefixs = list()
         env_init_fn_dills = list()
@@ -224,15 +235,17 @@ class RobomimicImageRunner(BaseImageRunner):
                 # switch to seed reset
                 assert isinstance(env.env.env, RobomimicImageWrapper)
                 env.env.env.init_state = None
-                env.seed(seed)
+                # env.seed(seed)
 
             env_seeds.append(seed)
             env_prefixs.append('test/')
             env_init_fn_dills.append(dill.dumps(init_fn))
 
-        # env = AsyncVectorEnv(env_fns, dummy_env_fn=dummy_env_fn)
-        env = SyncVectorEnv(env_fns)
-
+        env = AsyncVectorEnv(
+            env_fns,
+            dummy_env_fn=dummy_env_fn,
+        )
+        # env = SyncVectorEnv(env_fns)
 
         self.env_meta = env_meta
         self.env = env
@@ -404,6 +417,10 @@ class RobomimicImageRunner(BaseImageRunner):
         return uaction
 
     def close(self):
+        if not isinstance(self.env, SyncVectorEnv):
+            return
+        
+        # only for SyncVectorEnv
         env_list = self.env.envs
         for env in env_list:
             env_chain = [env]

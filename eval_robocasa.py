@@ -29,7 +29,7 @@ from robocasa.utils.dataset_registry import get_ds_path
 @click.option('-d', '--device', default='cuda:0')
 @click.option('-t', '--tasks', multiple=True, default=[])
 @click.option('-n', '--num_rollouts', default=50)
-@click.option('-s', '--split', required=True)
+@click.option('-s', '--split', default='train')
 @click.option('--overwrite', is_flag=True, help='Overwrite existing evals.')
 def main(checkpoint, output_dir, device, tasks, num_rollouts, split, overwrite):
     assert output_dir is None

@@ -238,6 +238,8 @@ class DiffusionTransformerHybridImagePolicy(BaseImagePolicy):
 
         return trajectory
 
+    def forward(self, batch):
+        return self.compute_loss(batch)
 
     def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
