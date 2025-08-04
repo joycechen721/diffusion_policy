@@ -72,6 +72,8 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
         dataset_path = pathlib.Path(dataset_path)
         delta_indices = list(range(-n_obs_steps+1, horizon - n_obs_steps + 1))
         delta_indices_obs = list(range(-n_obs_steps+1, 1))
+        assert len(delta_indices_obs) == n_obs_steps, \
+            f"delta_indices_obs length {len(delta_indices_obs)} != n_obs_steps {n_obs_steps}"   
         modality_keys_dict = get_modality_keys(dataset_path)
         video_modality_keys = modality_keys_dict["video"]
         language_modality_keys = modality_keys_dict["annotation"]
@@ -159,6 +161,7 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
             # move channel last to channel first
             # T,H,W,C
             # convert uint8 image to float32
+            print(data[lerobot_key].shape)
             obs_dict[key] = np.moveaxis(data[lerobot_key][T_slice],-1,1
                 ).astype(np.float32) / 255.
             # T,C,H,W
