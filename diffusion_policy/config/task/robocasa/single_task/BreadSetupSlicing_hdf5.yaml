@@ -1,4 +1,4 @@
-name: BreadSetupSlicing
+name: BreadSetupSlicing_hdf5
 
 shape_meta: &shape_meta
   # acceptable types: rgb, low_dim
@@ -25,14 +25,14 @@ shape_meta: &shape_meta
 
 dataset_paths: &dataset_paths [
   # human 100 demos
-  '/mnt/amlfs-03/shared/snasiriany/robocasa-datasets/v0.5/train/composite/BreadSetupSlicing/20250719/demo_im128.hdf5',
+  '/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-30-15-40-29/demo_im128.hdf5',
 ]
 
 abs_action: &abs_action False
 
 env_runner:
   _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
-  dataset_path: /mnt/amlfs-03/shared/snasiriany/robocasa-datasets/v0.5/train/composite/BreadSetupSlicing/20250719/demo_im128.hdf5
+  dataset_path: /mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToCabinet/mg/demo/2025-07-30-15-40-29/demo_im128.hdf5
   shape_meta: *shape_meta
   # costs 1GB per env
   n_train: 0

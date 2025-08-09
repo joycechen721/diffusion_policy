@@ -63,7 +63,9 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
             use_legacy_normalizer=False,
             use_cache=False,
             seed=42,
-            val_ratio=0.0
+            val_ratio=0.0,
+            lang_encoder=None,
+            del_lang_encoder_after_init=True,
         ):
 
         assert n_obs_steps and n_obs_steps > 0
@@ -109,7 +111,11 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
         self.lang_emb = obs_shape_meta.pop('lang_emb', None)
         if self.lang_emb is not None:
             assert language_modality_keys, "Language modality keys should not be empty if lang_emb is defined"
+            self._lang_encoder = lang_encoder
             self._get_lang_embeddings()
+            if del_lang_encoder_after_init:
+                del self._lang_encoder
+                self._lang_encoder = None
         for key, attr in obs_shape_meta.items():
             type = attr.get('type', 'low_dim')
             if type == 'rgb':
@@ -127,9 +133,10 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
     def _get_lang_embeddings(self):
         episode_path = self.dataset_path / LE_ROBOT_EPISODE_FILENAME
         device = TorchUtils.get_torch_device(try_to_use_cuda=True)
-        self._lang_encoder = LangUtils.LangEncoder(
-                device=device,
-        )
+        if self._lang_encoder is None:
+            self._lang_encoder = LangUtils.LangEncoder(
+                    device=device,
+            )
         self._demo_id_to_demo_lang_emb = {}
     
         with open(episode_path, "r") as f:
@@ -143,8 +150,6 @@ class LerobotDataset(LeRobotSingleDataset, BaseImageDataset):
             emb_batch = TensorUtils.to_numpy(emb_batch)
             for batch_idx, ep in enumerate(ep_batch):
                 self._demo_id_to_demo_lang_emb[ep] = emb_batch[batch_idx]
-        del self._lang_encoder
-        self._lang_encoder = None
             
     
 
@@ -276,7 +281,27 @@ class LerobotCotrainingDataset(LeRobotMixtureDataset, BaseImageDataset):
             "percentile_mixing_method": "weighted_average",
         } 
         ):
-        datasets = [LerobotDataset(shape_meta=shape_meta, dataset_path=dataset_path, horizon=horizon, pad_after=pad_after, pad_before=pad_before, n_obs_steps=n_obs_steps, abs_action=abs_action, rotation_rep=rotation_rep, use_legacy_normalizer=use_legacy_normalizer, use_cache=use_cache, seed=seed, val_ratio=val_ratio) for dataset_path in dataset_paths]
+        device = TorchUtils.get_torch_device(try_to_use_cuda=True)
+        lang_encoder = LangUtils.LangEncoder(device=device)
+        datasets = [
+            LerobotDataset(
+                shape_meta=shape_meta,
+                dataset_path=dataset_path,
+                horizon=horizon,
+                pad_after=pad_after,
+                pad_before=pad_before,
+                n_obs_steps=n_obs_steps,
+                abs_action=abs_action,
+                rotation_rep=rotation_rep,
+                use_legacy_normalizer=use_legacy_normalizer,
+                use_cache=use_cache,
+                seed=seed,
+                val_ratio=val_ratio,
+                lang_encoder=lang_encoder,
+                del_lang_encoder_after_init=False,
+            ) for dataset_path in dataset_paths
+        ]
+        del lang_encoder
         self.abs_action = abs_action
         assert not self.abs_action, "abs_action is not supported in LerobotCotrainingDataset"
         assert not ds_weights or len(ds_weights) == len(datasets), \

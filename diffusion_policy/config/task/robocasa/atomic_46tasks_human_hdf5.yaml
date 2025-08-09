@@ -1,4 +1,4 @@
-name: atomic_46tasks_human
+name: atomic_46tasks_human_hdf5
 
 shape_meta: &shape_meta
   # acceptable types: rgb, low_dim
