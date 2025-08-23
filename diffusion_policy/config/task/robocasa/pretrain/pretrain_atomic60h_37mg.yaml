@@ -1,0 +1,189 @@
+name: pretrain_atomic60h_37mg
+
+shape_meta: &shape_meta
+  # acceptable types: rgb, low_dim
+  obs:
+    robot0_agentview_right_image:
+      shape: [3, 256, 256]
+      type: rgb
+      lerobot_keys: ['video.robot0_agentview_right']
+    robot0_agentview_left_image:
+      shape: [3, 256, 256]
+      type: rgb
+      lerobot_keys: ['video.robot0_agentview_left']
+    robot0_eye_in_hand_image:
+      shape: [3, 256, 256]
+      type: rgb
+      lerobot_keys: ['video.robot0_eye_in_hand']
+    robot0_base_to_eef_pos:
+      shape: [3]
+      lerobot_keys: ['state.end_effector_position_relative']
+    robot0_base_to_eef_quat:
+      shape: [4]
+      lerobot_keys: ['state.end_effector_rotation_relative']
+    robot0_gripper_qpos:
+      shape: [2]
+      lerobot_keys: ['state.gripper_qpos']
+    lang_emb:
+      shape: [768]
+  action: 
+    shape: [12]
+    lerobot_keys: ['action.end_effector_position', 'action.end_effector_rotation', 'action.gripper_close', 'action.base_motion', 'action.control_mode',]
+
+dataset_paths: &dataset_paths [
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/AdjustToasterOvenTemperature/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/AdjustToasterOvenTemperature/20250820/mg/demo/2025-08-20-21-21-37/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/AdjustWaterTemperature/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/AdjustWaterTemperature/20250820/mg/demo/2025-08-20-21-21-50/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseBlenderLid/20250822/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseCabinet/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseCabinet/20250819/mg/demo/2025-08-20-21-30-42/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseDishwasher/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseDishwasher/20250820/mg/demo/2025-08-20-21-53-08/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseDrawer/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseDrawer/20250819/mg/demo/2025-08-20-21-53-15/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseElectricKettleLid/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseElectricKettleLid/20250820/mg/demo/2025-08-20-21-53-23/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseFridge/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseFridge/20250819/mg/demo/2025-08-20-21-53-31/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseFridgeDrawer/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseFridgeDrawer/20250821/mg/demo/2025-08-21-16-23-57/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseMicrowave/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseMicrowave/20250819/mg/demo/2025-08-20-21-54-00/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseOven/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseOven/20250820/mg/demo/2025-08-20-21-54-06/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseStandMixerHead/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseStandMixerHead/20250820/mg/demo/2025-08-20-21-54-11/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseToasterOvenDoor/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseToasterOvenDoor/20250820/mg/demo/2025-08-20-21-54-20/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CoffeeServeMug/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CoffeeServeMug/20250819/mg/demo/2025-08-20-21-54-30/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CoffeeSetupMug/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CoffeeSetupMug/20250819/mg/demo/2025-08-20-21-54-35/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/NavigateKitchen/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenBlenderLid/20250822/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenCabinet/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenDishwasher/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenDrawer/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenDrawer/20250819/mg/demo/2025-08-20-21-55-00/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenElectricKettleLid/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenElectricKettleLid/20250820/mg/demo/2025-08-20-21-55-09/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenFridge/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenFridgeDrawer/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenMicrowave/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenMicrowave/20250819/mg/demo/2025-08-20-21-55-16/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenOven/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenOven/20250820/mg/demo/2025-08-20-21-55-18/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenStandMixerHead/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenStandMixerHead/20250820/mg/demo/2025-08-20-21-55-26/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenToasterOvenDoor/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/OpenToasterOvenDoor/mg/demo/2025-08-02-08-07-17/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCabinetToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCabinetToCounter/20250819/mg/demo/2025-08-20-21-56-18/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToBlender/20250822/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToCabinet/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToCabinet/20250819/mg/demo/2025-08-20-21-56-25/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToDrawer/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToMicrowave/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToMicrowave/20250819/mg/demo/2025-08-20-21-56-32/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToOven/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToOven/20250819/mg/demo/2025-08-20-21-56-41/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToSink/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToStandMixer/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToStove/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToStove/20250819/mg/demo/2025-08-20-22-33-04/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPCounterToToasterOven/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPDrawerToCounter/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPFridgeDrawerToShelf/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPFridgeShelfToDrawer/20250821/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPMicrowaveToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPSinkToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPStoveToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPToasterOvenToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPToasterOvenToCounter/20250819/mg/demo/2025-08-21-10-00-21/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/PnPToasterToCounter/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/SlideDishwasherRack/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/SlideDishwasherRack/20250820/mg/demo/2025-08-20-21-57-11/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/SlideOvenRack/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/SlideToasterOvenRack/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/SlideToasterOvenRack/20250820/mg/demo/2025-08-20-21-57-23/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/StartCoffeeMachine/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/StartCoffeeMachine/20250819/mg/demo/2025-08-21-09-42-00/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOffMicrowave/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOffMicrowave/20250819/mg/demo/2025-08-21-09-46-12/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOffSinkFaucet/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOffSinkFaucet/20250819/mg/demo/2025-08-21-10-27-00/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOffStove/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnBlender/20250822/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnElectricKettle/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnElectricKettle/20250820/mg/demo/2025-08-21-09-59-45/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnMicrowave/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnMicrowave/20250819/mg/demo/2025-08-21-12-09-53/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnSinkFaucet/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnStove/20250819/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnStove/20250819/mg/demo/2025-08-21-12-08-41/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnToaster/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnToaster/20250820/mg/demo/2025-08-21-12-08-30/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnToasterOven/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnOnToasterOven/20250820/mg/demo/2025-08-21-12-35-58/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnSinkSpout/20250820/groot",
+  "/mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/TurnSinkSpout/20250820/mg/demo/2025-08-21-12-27-22/groot",
+]
+
+abs_action: &abs_action False
+
+env_runner:
+  _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
+  dataset_path: /mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseStandMixerHead/20250711/demo.hdf5
+  shape_meta: *shape_meta
+  # costs 1GB per env
+  n_train: 0
+  n_train_vis: 1
+  train_start_idx: 0
+  n_test: 50
+  n_test_vis: 4
+  test_start_seed: 100000
+  max_steps: 600
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+  render_obs_key: 'robot0_agentview_right_image'
+  fps: 10
+  crf: 22
+  past_action: ${past_action_visible}
+  abs_action: *abs_action
+  tqdm_interval_sec: 1.0
+  n_envs: 1
+  env_kwargs:
+    seed: 1111111
+    obj_instance_split: 'train'
+    style_ids: -2
+    layout_ids: -2
+    layout_and_style_ids: null
+    clutter_mode: 0
+
+    use_camera_obs: true
+    use_object_obs: true
+    camera_depths: false
+    has_renderer: false
+    has_offscreen_renderer: true
+    camera_names: ['robot0_agentview_left', 'robot0_agentview_right', 'robot0_eye_in_hand']
+    camera_widths: 256
+    camera_heights: 256
+    ignore_done: true
+    reward_shaping: false
+# evaluation at this config requires a 16 core 64GB instance.
+
+dataset:
+  _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
+  shape_meta: *shape_meta
+  dataset_paths: *dataset_paths
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  n_obs_steps: ${dataset_obs_steps}
+  abs_action: *abs_action
+  rotation_rep: 'rotation_6d'
+  use_legacy_normalizer: False
+  use_cache: True
+  seed: 42
+  val_ratio: 0.02
