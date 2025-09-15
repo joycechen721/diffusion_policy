@@ -93,7 +93,7 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
     cfg.task.dataset_path = ds_path
     cfg.task.env_runner.dataset_path = ds_path
     cfg.task.dataset.dataset_path = ds_path
-    cfg.task.env_runner.max_steps = ds_meta["horizon"]
+    cfg.task.env_runner.max_steps = int(ds_meta["horizon"] * 1.5)
     cfg.task.env_runner.n_envs = num_envs
 
     cls = hydra.utils.get_class(cfg._target_)
@@ -157,32 +157,12 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
 @click.option('-s', '--split', required=True)
 # @click.option('--overwrite', is_flag=True, help='Overwrite existing evals.')
 def main(checkpoint, output_dir, device, tasks, num_rollouts, num_envs, split): #, overwrite):
-    if len(tasks) == 1 and tasks[0] == "atomic":
-        tasks = ATOMIC_TASKS
-    if len(tasks) == 1 and tasks[0] == "composite20":
-        tasks = [
-            "ArrangeBreadBasket",
-            "BreadSelection",
-            "CategorizeCondiments",
-            "CuttingToolSelection",
-            # "DessertAssembly",
-            "GarnishPancake",
-            "GatherTableware",
-            "HeatKebabSandwich",
-            "MakeIceLemonade",
-            "PanTransfer",
-            "PortionHotDogs",
-            "PreSoakPan",
-            "PrepareCoffee",
-            "RecycleBottlesByType",
-            "RinseSinkBasin",
-            "ScrubCuttingBoard",
-            "SearingMeat",
-            "SeparateFreezerRack",
-            "SetUpCuttingStation",
-            "WaffleReheat",
-            "WashFruitColander",
-        ]
+    if len(tasks) == 1 and tasks[0] == "atomic_seen":
+        tasks = POST_TRAINING_TASKS["atomic_seen"]
+    elif len(tasks) == 1 and tasks[0] == "composite_seen":
+        tasks = POST_TRAINING_TASKS["composite_seen"]
+    elif len(tasks) == 1 and tasks[0] == "composite_unseen":
+        tasks = POST_TRAINING_TASKS["composite_unseen"]
     
     for task_i, task in enumerate(tasks):
         print(colored(f"[{task_i+1}/{len(tasks)}] running evals for {task}", "yellow"))
