@@ -117,7 +117,10 @@ class TrainDiffusionTransformerHybridWorkspace(BaseWorkspace):
         
         if "ckpt_path" in cfg.task and cfg.task.ckpt_path is not None:
             accelerator.print(f"Initializing from checkpoint {cfg.task.ckpt_path}")
-            self.load_checkpoint(path=cfg.task.ckpt_path)
+            if cfg.training.resume:
+                self.load_checkpoint(path=cfg.task.ckpt_path)
+            else:
+                self.load_checkpoint(path=cfg.task.ckpt_path, include_keys=[])
 
         # configure dataset
         dataset: BaseImageDataset
