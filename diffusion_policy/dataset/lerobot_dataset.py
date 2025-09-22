@@ -35,11 +35,6 @@ from robocasa.utils.dataset_registry import DATASET_SOUP_REGISTRY
 from gr00t.data.dataset import LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME, ModalityConfig, LE_ROBOT_EPISODE_FILENAME, LeRobotMixtureDataset
 import pathlib
 
-WEIGHTS = {
-    "multitask_cotrain": 50 * np.array([0.1/5] * 5 + [0.9/350] * 350),
-    "multitask_realonly": np.ones(5)
-}
-
 def get_modality_keys(dataset_path: pathlib.Path) -> dict[str, list[str]]:
     """
     Get the modality keys from the dataset path.
@@ -334,11 +329,6 @@ class LerobotCotrainingDataset(LeRobotMixtureDataset, BaseImageDataset):
         del lang_encoder
         self.abs_action = abs_action
         assert not self.abs_action, "abs_action is not supported in LerobotCotrainingDataset"
-        if ds_weights in WEIGHTS:
-            ds_weights = WEIGHTS[ds_weights]
-            assert len(ds_weights) == len(datasets), \
-                f"ds_weights length {len(ds_weights)} != datasets length {len(datasets)}"
-            print("Using predefined dataset weights:", ds_weights)
         assert ds_weights is None or len(ds_weights) == len(datasets), \
             f"ds_weights length {len(ds_weights)} != datasets length {len(datasets)}"
         
