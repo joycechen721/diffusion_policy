@@ -349,7 +349,7 @@ class LerobotCotrainingDataset(LeRobotMixtureDataset, BaseImageDataset):
             ds_weights = np.array([np.power(len(dataset), ds_weights_alpha) for dataset in datasets])
             # the groot dataloader requires that at least one dataset has weight 1.0
             ds_weights = ds_weights / ds_weights[0]
-            print("dataset weights:", ds_weights)
+        print("dataset weights:", ds_weights)
         
         dataset_mixture = list(zip(datasets, ds_weights))
         # set balance_dataset_weights to False, since we are calculating weights ourselves
