@@ -30,26 +30,6 @@ shape_meta: &shape_meta
     shape: [12]
     lerobot_keys: ['action.end_effector_position', 'action.end_effector_rotation', 'action.gripper_close', 'action.base_motion', 'action.control_mode',]
 
-dataset_paths: &dataset_paths [
-  # posttraining demos
-  "v0.5/test/composite/ArrangeBreadBasket/20250809/groot",
-  "v0.5/test/composite/ArrangeTea/20250812/groot",
-  "v0.5/test/composite/BreadSelection/20250815/groot",
-  "v0.5/test/composite/CategorizeCondiments/20250814/groot",
-  "v0.5/test/composite/CuttingToolSelection/20250814/groot",
-  "v0.5/test/composite/GarnishPancake/20250815/groot",
-  "v0.5/test/composite/GatherTableware/20250815/groot",
-  "v0.5/test/composite/HeatKebabSandwich/20250813/groot",
-  "v0.5/test/composite/MakeIceLemonade/20250813/groot",
-  "v0.5/test/composite/PanTransfer/20250817/groot",
-  "v0.5/test/composite/PortionHotDogs/20250816/groot",
-  "v0.5/test/composite/RecycleBottlesByType/20250812/groot",
-  "v0.5/test/composite/SeparateFreezerRack/20250815/groot",
-  "v0.5/test/composite/WaffleReheat/20250817/groot",
-  "v0.5/test/composite/WashFruitColander/20250811/groot",
-  "v0.5/test/composite/WeighIngredients/20250812/groot",
-]
-
 abs_action: &abs_action False
 
 env_runner:
@@ -96,7 +76,7 @@ env_runner:
 dataset:
   _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
   shape_meta: *shape_meta
-  dataset_paths: *dataset_paths
+  dataset_soup: posttrain_composite_unseen
   horizon: ${horizon}
   pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
   pad_after: ${eval:'${n_action_steps}-1'}

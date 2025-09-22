@@ -30,28 +30,6 @@ shape_meta: &shape_meta
     shape: [12]
     lerobot_keys: ['action.end_effector_position', 'action.end_effector_rotation', 'action.gripper_close', 'action.base_motion', 'action.control_mode',]
 
-dataset_paths: &dataset_paths [
-  # posttraining demos
-  "v0.5/test/atomic/CloseBlenderLid/20250822/groot",
-  "v0.5/test/atomic/CloseFridge/20250816/groot",
-  "v0.5/test/atomic/CloseToasterOvenDoor/20250818/groot",
-  "v0.5/test/atomic/CoffeeSetupMug/20250813/groot",
-  "v0.5/test/atomic/NavigateKitchen/20250821/groot",
-  "v0.5/test/atomic/OpenCabinet/20250813/groot",
-  "v0.5/test/atomic/OpenDrawer/20250816/groot",
-  "v0.5/test/atomic/OpenStandMixerHead/20250818/groot",
-  "v0.5/test/atomic/PnPCounterToCabinet/20250811/groot",
-  "v0.5/test/atomic/PnPCounterToStove/20250818/groot",
-  "v0.5/test/atomic/PnPDrawerToCounter/20250820/groot",
-  "v0.5/test/atomic/PnPSinkToCounter/20250813/groot",
-  "v0.5/test/atomic/PnPToasterToCounter/20250817/groot",
-  "v0.5/test/atomic/SlideDishwasherRack/20250820/groot",
-  "v0.5/test/atomic/TurnOffStove/20250812/groot",
-  "v0.5/test/atomic/TurnOnElectricKettle/20250817/groot",
-  "v0.5/test/atomic/TurnOnMicrowave/20250813/groot",
-  "v0.5/test/atomic/TurnOnSinkFaucet/20250812/groot",
-]
-
 abs_action: &abs_action False
 
 env_runner:
@@ -98,7 +76,7 @@ env_runner:
 dataset:
   _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
   shape_meta: *shape_meta
-  dataset_paths: *dataset_paths
+  dataset_soup: posttrain_atomic_seen
   horizon: ${horizon}
   pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
   pad_after: ${eval:'${n_action_steps}-1'}

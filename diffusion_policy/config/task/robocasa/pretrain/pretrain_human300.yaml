@@ -1,4 +1,4 @@
-name: pretrain_human300_mg60
+name: pretrain_human300
 
 shape_meta: &shape_meta
   # acceptable types: rgb, low_dim
@@ -76,7 +76,7 @@ env_runner:
 dataset:
   _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
   shape_meta: *shape_meta
-  dataset_soup: pretrain_human300_mg60
+  dataset_soup: pretrain_human300
   horizon: ${horizon}
   pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
   pad_after: ${eval:'${n_action_steps}-1'}

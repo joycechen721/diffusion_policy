@@ -22,7 +22,7 @@ import json
 from termcolor import colored
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 
-from robocasa.utils.dataset_registry import get_ds_path
+from robocasa.utils.dataset_registry import get_ds_meta
 from robocasa.utils.dataset_registry import SINGLE_STAGE_TASK_DATASETS, MULTI_STAGE_TASK_DATASETS, POST_TRAINING_TASKS
 
 
@@ -84,7 +84,8 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
         raise ValueError("Invalid split. Choose among train/test/all")
     cfg = OmegaConf.create(cfg)
 
-    ds_path, ds_meta = get_ds_path(task=task, ds_type="human_raw", split=split, return_info=True)
+    ds_meta = get_ds_meta(task=task, ds_type="human_raw", split=split)
+    ds_path = ds_meta["path"]
     
     cfg.task.env_runner.n_train = 0
     cfg.task.env_runner.n_test = num_rollouts
@@ -152,7 +153,7 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
 @click.option('-o', '--output_dir', default=None)
 @click.option('-d', '--device', default='cuda:0')
 @click.option('-t', '--tasks', multiple=True, default=DEFAULT_TASKS)
-@click.option('-n', '--num_rollouts', default=50)
+@click.option('-n', '--num_rollouts', default=30)
 @click.option('-e', '--num_envs', default=10)
 @click.option('-s', '--split', required=True)
 # @click.option('--overwrite', is_flag=True, help='Overwrite existing evals.')
@@ -163,6 +164,8 @@ def main(checkpoint, output_dir, device, tasks, num_rollouts, num_envs, split): 
         tasks = POST_TRAINING_TASKS["composite_seen"]
     elif len(tasks) == 1 and tasks[0] == "composite_unseen":
         tasks = POST_TRAINING_TASKS["composite_unseen"]
+    else:
+        tasks = POST_TRAINING_TASKS["atomic_seen"] + POST_TRAINING_TASKS["composite_seen"] + POST_TRAINING_TASKS["composite_unseen"]
     
     for task_i, task in enumerate(tasks):
         print(colored(f"[{task_i+1}/{len(tasks)}] running evals for {task}", "yellow"))

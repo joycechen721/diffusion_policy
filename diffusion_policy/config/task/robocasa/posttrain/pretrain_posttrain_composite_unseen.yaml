@@ -1,4 +1,4 @@
-name: pretrain_human300_mg60
+name: pretrain_posttrain_composite_unseen
 
 shape_meta: &shape_meta
   # acceptable types: rgb, low_dim
@@ -32,9 +32,11 @@ shape_meta: &shape_meta
 
 abs_action: &abs_action False
 
+ckpt_path: /scratch/10301/snasiriany/dp_expdata/outputs/2025.09.11/16.10.56_train_diffusion_transformer_hybrid_pretrain_human300_mg60/checkpoints/epoch=1000-test_mean_score=-1.000.ckpt
+
 env_runner:
   _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
-  dataset_path: /mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/train/atomic/CloseStandMixerHead/20250711/demo.hdf5
+  dataset_path: /mnt/amlfs-01/shared/robocasa_benchmark/robocasa-datasets/v0.5/test/atomic/PnPCounterToCabinet/20250811/demo.hdf5
   shape_meta: *shape_meta
   # costs 1GB per env
   n_train: 0
@@ -56,10 +58,10 @@ env_runner:
   env_kwargs:
     seed: 1111111
     obj_instance_split: 'test'
-    style_ids: -2
-    layout_ids: -2
-    layout_and_style_ids: null
-    clutter_mode: 0
+    style_ids: null
+    layout_ids: null
+    layout_and_style_ids: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]
+    clutter_mode: 1
 
     use_camera_obs: true
     use_object_obs: true
@@ -76,7 +78,7 @@ env_runner:
 dataset:
   _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
   shape_meta: *shape_meta
-  dataset_soup: pretrain_human300_mg60
+  dataset_soup: posttrain_composite_unseen
   horizon: ${horizon}
   pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
   pad_after: ${eval:'${n_action_steps}-1'}
