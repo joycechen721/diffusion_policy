@@ -68,7 +68,7 @@ ema:
 
 dataloader:
   batch_size: 120
-  num_workers: 32
+  num_workers: 16
   shuffle: True
   pin_memory: True
   persistent_workers: False
@@ -132,14 +132,14 @@ checkpoint:
   save_last_snapshot: False
 
 multi_run:
-  run_dir: /data2/abhim/exps/diffusion_policy/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
 
 hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: /data2/abhim/exps/diffusion_policy/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
   sweep:
-    dir: /data2/abhim/exps/diffusion_policy/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
     subdir: ${hydra.job.num}
