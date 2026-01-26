@@ -329,7 +329,7 @@ class LerobotCotrainingDataset(LeRobotMixtureDataset, BaseImageDataset):
         del lang_encoder
         self.abs_action = abs_action
         assert not self.abs_action, "abs_action is not supported in LerobotCotrainingDataset"
-        assert not ds_weights or len(ds_weights) == len(datasets), \
+        assert ds_weights is None or len(ds_weights) == len(datasets), \
             f"ds_weights length {len(ds_weights)} != datasets length {len(datasets)}"
         
         if ds_weights is None and all(ds_meta["ds_weight"] is not None for ds_meta in dataset_soup_list):
@@ -339,7 +339,7 @@ class LerobotCotrainingDataset(LeRobotMixtureDataset, BaseImageDataset):
             ds_weights = np.array([np.power(len(dataset), ds_weights_alpha) for dataset in datasets])
             # the groot dataloader requires that at least one dataset has weight 1.0
             ds_weights = ds_weights / ds_weights[0]
-            print("dataset weights:", ds_weights)
+        print("dataset weights:", ds_weights)
         
         dataset_mixture = list(zip(datasets, ds_weights))
         # set balance_dataset_weights to False, since we are calculating weights ourselves

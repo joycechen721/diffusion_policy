@@ -50,6 +50,7 @@ class RobomimicHDF5ImageDataset(SequenceDataset,BaseImageDataset):
             action_keys=('actions',),
             lang_encoder=None,
             del_lang_encoder_after_init=False,
+            hdf5_cache_mode=None,
         ):
 
         assert not abs_action, "abs_action not supported"
@@ -139,6 +140,7 @@ class RobomimicHDF5ImageDataset(SequenceDataset,BaseImageDataset):
             normalize_actions=False, # don't normalize actions in dataset (will be normalized by diffusion policy model later)
             lang_encoder=lang_encoder,
             del_lang_encoder_after_init=del_lang_encoder_after_init,
+            hdf5_cache_mode=hdf5_cache_mode
         )
 
         rgb_keys = list()
