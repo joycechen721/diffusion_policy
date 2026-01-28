@@ -32,7 +32,7 @@ from typing import Dict, List
 from robocasa.utils.dataset_registry import DATASET_SOUP_REGISTRY
 
 
-from gr00t.data.dataset import LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME, ModalityConfig, LE_ROBOT_EPISODE_FILENAME, LeRobotMixtureDataset
+from robocasa.utils.groot_utils.groot_dataset import LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME, ModalityConfig, LE_ROBOT_EPISODE_FILENAME, LeRobotMixtureDataset
 import pathlib
 
 def get_modality_keys(dataset_path: pathlib.Path) -> dict[str, list[str]]:
