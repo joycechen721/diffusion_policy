@@ -2,6 +2,9 @@
 Usage:
 python eval.py --checkpoint data/image/pusht/diffusion_policy_cnn/train_0/checkpoints/latest.ckpt -o data/pusht_eval_output
 """
+import gymnasium as gym
+import robocasa
+from diffusion_policy.common.pytorch_util import dict_apply
 
 import sys
 # use line-buffering for both stdout and stderr
@@ -45,40 +48,9 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
     cfg = payload['cfg']
     cfg = copy.deepcopy(OmegaConf.to_container(cfg))
     cfg["task"]["env_runner"]["env_kwargs"] = {
+        "split": split,
         "seed": 1111111,
-        "use_camera_obs": True,
-        "use_object_obs": True,
-        "camera_depths": False,
-        "has_renderer": False,
-        "has_offscreen_renderer": True,
-        "camera_names": ['robot0_agentview_left', 'robot0_agentview_right', 'robot0_eye_in_hand'],
-        "camera_widths": 256,
-        "camera_heights": 256,
-        "ignore_done": True,
-        "reward_shaping": False,
     }
-    if split == "pretrain":
-        cfg["task"]["env_runner"]["env_kwargs"].update(
-            obj_instance_split="pretrain",
-            style_ids=-2,
-            layout_ids=-2,
-        )
-    elif split == "target":
-        cfg["task"]["env_runner"]["env_kwargs"].update(
-            obj_instance_split="target",
-            style_ids=None,
-            layout_ids=None,
-            layout_and_style_ids=[[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]],
-            clutter_mode=1,
-        )
-    elif split == "all":
-        cfg["task"]["env_runner"]["env_kwargs"].update(
-            obj_instance_split=None,
-            style_ids=-3,
-            layout_ids=-3,
-        )
-    else:
-        raise ValueError("Invalid split. Choose among train/test/all")
     cfg = OmegaConf.create(cfg)
 
     ds_meta = get_ds_meta(task=task, split=split, source="human")

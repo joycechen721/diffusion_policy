@@ -16,6 +16,7 @@ from diffusion_policy.gym_util.video_recording_wrapper import VideoRecordingWrap
 from diffusion_policy.model.common.rotation_transformer import RotationTransformer
 from omegaconf import OmegaConf
 from functools import partial
+from pathlib import Path
 
 from diffusion_policy.policy.base_image_policy import BaseImagePolicy
 from diffusion_policy.common.pytorch_util import dict_apply
@@ -24,15 +25,10 @@ from diffusion_policy.env.robomimic.robomimic_image_wrapper import RobomimicImag
 import robomimic.utils.file_utils as FileUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.obs_utils as ObsUtils
+import gymnasium as gym
 
 import robocasa
-# import mimicgen
-# EVAL_UPDATE_KWARGS =  {
-#                 "generative_textures": None,
-#                 "randomize_cameras": False,
-#                 "obj_instance_split": "B",
-#             }
-
+import robocasa.utils.lerobot_utils as LU
 
 # these lines necessary to prevent all the CPU cores being taken up
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -41,19 +37,11 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 
-def create_env(env_meta, shape_meta, enable_render=True):
-    modality_mapping = collections.defaultdict(list)
-    for key, attr in shape_meta['obs'].items():
-        modality_mapping[attr.get('type', 'low_dim')].append(key)
-    ObsUtils.initialize_obs_modality_mapping_from_dict(modality_mapping)
-    env_name = env_meta['env_name']
-    env_name = env_name[3:] if env_name.startswith('MG_') else env_name
-    env = EnvUtils.create_env_from_metadata(
-        env_meta=env_meta,
-        env_name=env_name,
-        render=False, 
-        render_offscreen=enable_render,
-        use_image_obs=enable_render, 
+def create_env(split, env_name, seed=None):
+    env = gym.make(
+        f"robocasa/{env_name}",
+        split=split,
+        seed=seed
     )
     return env
 
@@ -91,39 +79,36 @@ class RobomimicImageRunner(BaseImageRunner):
             n_envs = n_train + n_test
 
         # assert n_obs_steps <= n_action_steps
-        dataset_path = os.path.expanduser(dataset_path)
         robosuite_fps = 20
         steps_per_render = max(robosuite_fps // fps, 1)
 
         # read from dataset
-        env_meta = FileUtils.get_env_metadata_from_dataset(
-            dataset_path)
+        env_meta = LU.get_env_metadata(Path(dataset_path))
+        env_name = env_meta['env_name']
         # disable object state observation
-        env_meta['env_kwargs']['use_object_obs'] = False
         self.env_kwargs = OmegaConf.to_container(env_kwargs) if env_kwargs is not None else {}
-        env_meta['env_kwargs'].update(self.env_kwargs)
 
         rotation_transformer = None
         if abs_action:
-            env_meta['env_kwargs']['controller_configs']['control_delta'] = False
             rotation_transformer = RotationTransformer('axis_angle', 'rotation_6d')
 
         def env_fn(env_i):
             # set seed for env appropriately
-            if "seed" in env_meta["env_kwargs"]:
-                env_meta["env_kwargs"]["seed"] += env_i
-            robomimic_env = create_env(
-                env_meta=env_meta, 
-                shape_meta=shape_meta
+            if "seed" in self.env_kwargs:
+                self.env_kwargs["seed"] += env_i
+            robocasa_env = create_env(
+                split=self.env_kwargs["split"], 
+                env_name=env_name,
+                seed=self.env_kwargs.get("seed", None)
             )
             # Robosuite's hard reset causes excessive memory consumption.
             # Disabled to run more envs.
             # https://github.com/ARISE-Initiative/robosuite/blob/92abf5595eddb3a845cd1093703e5a3ccd01e77e/robosuite/environments/base.py#L247-L248
-            # robomimic_env.env.hard_reset = False
+            # robocasa_env.env.hard_reset = False
             return MultiStepWrapper(
                 VideoRecordingWrapper(
                     RobomimicImageWrapper(
-                        env=robomimic_env,
+                        env=robocasa_env,
                         shape_meta=shape_meta,
                         init_state=None,
                         render_obs_key=render_obs_key
@@ -149,15 +134,15 @@ class RobomimicImageRunner(BaseImageRunner):
         # a separate env_fn that does not create OpenGL context (enable_render=False)
         # is needed to initialize spaces.
         def dummy_env_fn():
-            robomimic_env = create_env(
-                env_meta=env_meta, 
-                shape_meta=shape_meta,
-                enable_render=False
+            robocasa_env = create_env(
+                split=self.env_kwargs["split"], 
+                env_name=env_name,
+                seed=self.env_kwargs.get("seed", None)
             )
             return MultiStepWrapper(
                 VideoRecordingWrapper(
                     RobomimicImageWrapper(
-                        env=robomimic_env,
+                        env=robocasa_env,
                         shape_meta=shape_meta,
                         init_state=None,
                         render_obs_key=render_obs_key
@@ -183,35 +168,7 @@ class RobomimicImageRunner(BaseImageRunner):
         env_prefixs = list()
         env_init_fn_dills = list()
 
-        # train
-        with h5py.File(dataset_path, 'r') as f:
-            start = 0 if 'data/demo_0' in f else 1
-            for i in range(start, n_train):
-                train_idx = train_start_idx + i
-                enable_render = i < n_train_vis
-                init_state = f[f'data/demo_{train_idx}/states'][0]
-
-                def init_fn(env, init_state=init_state, 
-                    enable_render=enable_render):
-                    # setup rendering
-                    # video_wrapper
-                    assert isinstance(env.env, VideoRecordingWrapper)
-                    env.env.video_recoder.stop()
-                    env.env.file_path = None
-                    if enable_render:
-                        filename = pathlib.Path(output_dir).joinpath(
-                            'media', wv.util.generate_id() + ".mp4")
-                        filename.parent.mkdir(parents=False, exist_ok=True)
-                        filename = str(filename)
-                        env.env.file_path = filename
-
-                    # switch to init_state reset
-                    assert isinstance(env.env.env, RobomimicImageWrapper)
-                    env.env.env.init_state = init_state
-
-                env_seeds.append(train_idx)
-                env_prefixs.append('train/')
-                env_init_fn_dills.append(dill.dumps(init_fn))
+        assert n_train == 0, "Training envs not supported"
         
         # test
         for i in range(n_test):
@@ -346,7 +303,7 @@ class RobomimicImageRunner(BaseImageRunner):
                 obs, reward, done, info = env.step(env_action)
                 # done = np.all(done)
                 # for robocasa switch to the proper success check
-                done = np.all(done) or np.all([this_info["is_success"][0]["task"] for this_info in info])
+                done = np.all(done) or np.all([this_info["success"][0] for this_info in info])
                 past_action = action
 
                 # update pbar
