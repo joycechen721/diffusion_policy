@@ -16,7 +16,7 @@ import copy
 
 import os
 import pathlib
-import click
+import argparse
 import hydra
 import torch
 import dill
@@ -25,8 +25,8 @@ import json
 from termcolor import colored
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 
-from robocasa.utils.dataset_registry_utils import get_ds_meta
-from robocasa.utils.dataset_registry import TASK_SOUP_REGISTRY
+from robocasa.utils.dataset_registry_utils import get_task_horizon
+from robocasa.utils.dataset_registry import TASK_SET_REGISTRY
 
 
 def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs, split, overwrite):
@@ -50,20 +50,17 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
     cfg["task"]["env_runner"]["env_kwargs"] = {
         "split": split,
         "seed": 1111111,
+        "env_name": task,
     }
     cfg = OmegaConf.create(cfg)
 
-    ds_meta = get_ds_meta(task=task, split=split, source="human")
-    ds_path = ds_meta["path"]
+    horizon = get_task_horizon(task=task)
     
     cfg.task.env_runner.n_train = 0
     cfg.task.env_runner.n_test = num_rollouts
 
     # set dataset path and horizon
-    cfg.task.dataset_path = ds_path
-    cfg.task.env_runner.dataset_path = ds_path
-    cfg.task.dataset.dataset_path = ds_path
-    cfg.task.env_runner.max_steps = int(ds_meta["horizon"] * 1.5)
+    cfg.task.env_runner.max_steps = int(horizon * 1.5)
     cfg.task.env_runner.n_envs = num_envs
 
     cls = hydra.utils.get_class(cfg._target_)
@@ -86,17 +83,17 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
     while try_num <= MAX_TRIES:
         env_runner = None
         runner_log = None
-        try:
-            env_runner = hydra.utils.instantiate(
-                cfg.task.env_runner,
-                output_dir=output_dir)
-            runner_log = env_runner.run(policy)
-        except Exception as e:
-            print(f"Excpetion in env_runner (try {try_num})")
-            print(e)
-            print()
-            try_num += 1
-            continue
+        # try:
+        env_runner = hydra.utils.instantiate(
+            cfg.task.env_runner,
+            output_dir=output_dir)
+        runner_log = env_runner.run(policy)
+        # except Exception as e:
+        #     print(f"Excpetion in env_runner (try {try_num})")
+        #     print(e)
+        #     print()
+        #     try_num += 1
+        #     continue
         
         break
     
@@ -117,24 +114,26 @@ def eval_task(checkpoint, base_output_dir, device, task, num_rollouts, num_envs,
     del policy
     del workspace
 
-@click.command()
-@click.option('-c', '--checkpoint', required=True)
-@click.option('-o', '--output_dir', default=None)
-@click.option('-d', '--device', default='cuda:0')
-@click.option('-t', '--task_soup', multiple=True, required=True)
-@click.option('-n', '--num_rollouts', default=30)
-@click.option('-e', '--num_envs', default=5)
-@click.option('-s', '--split', required=True)
-# @click.option('--overwrite', is_flag=True, help='Overwrite existing evals.')
-def main(checkpoint, output_dir, device, task_soup, num_rollouts, num_envs, split): #, overwrite):
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--checkpoint', required=True)
+    parser.add_argument('-o', '--output_dir', default=None)
+    parser.add_argument('-d', '--device', default='cuda:0')
+    parser.add_argument('-t', '--task_set', required=True, nargs='+')
+    parser.add_argument('-n', '--num_rollouts', default=30, type=int)
+    parser.add_argument('-e', '--num_envs', default=5, type=int)
+    parser.add_argument('-s', '--split', required=True)
+    args = parser.parse_args()
+
     all_tasks = []
-    for task_soup_i in task_soup:
-        all_tasks += TASK_SOUP_REGISTRY[task_soup_i]
+    for task_soup_i in args.task_set:
+        all_tasks += TASK_SET_REGISTRY[task_soup_i]
     all_tasks = set(all_tasks)
     
     for task_i, task in enumerate(all_tasks):
         print(colored(f"[{task_i+1}/{len(all_tasks)}] running evals for {task}", "yellow"))
-        eval_task(checkpoint, output_dir, device, task, num_rollouts, num_envs, split, overwrite=False)
+        eval_task(args.checkpoint, args.output_dir, args.device, task, args.num_rollouts, args.num_envs, args.split, overwrite=False)
 
 if __name__ == '__main__':
     main()

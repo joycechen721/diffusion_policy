@@ -82,11 +82,9 @@ class RobomimicImageRunner(BaseImageRunner):
         robosuite_fps = 20
         steps_per_render = max(robosuite_fps // fps, 1)
 
-        # read from dataset
-        env_meta = LU.get_env_metadata(Path(dataset_path))
-        env_name = env_meta['env_name']
         # disable object state observation
         self.env_kwargs = OmegaConf.to_container(env_kwargs) if env_kwargs is not None else {}
+        env_name = self.env_kwargs["env_name"]
 
         rotation_transformer = None
         if abs_action:
@@ -98,7 +96,7 @@ class RobomimicImageRunner(BaseImageRunner):
                 self.env_kwargs["seed"] += env_i
             robocasa_env = create_env(
                 split=self.env_kwargs["split"], 
-                env_name=env_name,
+                env_name=self.env_kwargs["env_name"],
                 seed=self.env_kwargs.get("seed", None)
             )
             # Robosuite's hard reset causes excessive memory consumption.
@@ -204,7 +202,6 @@ class RobomimicImageRunner(BaseImageRunner):
         )
         # env = SyncVectorEnv(env_fns)
 
-        self.env_meta = env_meta
         self.env = env
         self.env_fns = env_fns
         self.env_seeds = env_seeds
@@ -256,7 +253,7 @@ class RobomimicImageRunner(BaseImageRunner):
             past_action = None
             policy.reset()
 
-            env_name = self.env_meta['env_name']
+            env_name = self.env_kwargs['env_name']
             pbar = tqdm.tqdm(total=self.max_steps, desc=f"Eval {env_name}Image {chunk_idx+1}/{n_chunks}", 
                 leave=False, mininterval=self.tqdm_interval_sec)
             
@@ -341,7 +338,7 @@ class RobomimicImageRunner(BaseImageRunner):
             if video_path is not None:
                 sim_video = wandb.Video(video_path)
                 log_data[prefix+f'sim_video_{seed}'] = sim_video
-        env_name = self.env_meta["env_name"]
+        env_name = self.env_kwargs["env_name"]
         log_data[f'success_rate/{env_name}'] = success_rate
         # log aggregate metrics
         for prefix, value in max_rewards.items():
