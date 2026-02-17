@@ -22,7 +22,10 @@ class TopKCheckpointManager:
     def get_ckpt_path(self, data: Dict[str, float]) -> Optional[str]:
         if self.k == 0:
             return None
-
+        
+        # this change needed to accomodate case when turning off rollouts
+        if self.monitor_key not in data:
+            data[self.monitor_key] = -1.0
         value = data[self.monitor_key]
         ckpt_path = os.path.join(
             self.save_dir, self.format_str.format(**data))

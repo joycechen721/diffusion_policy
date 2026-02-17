@@ -5,6 +5,11 @@ import gym
 from gym import spaces
 from omegaconf import OmegaConf
 from robomimic.envs.env_robosuite import EnvRobosuite
+from robomimic.macros import LANG_EMB_KEY
+from robomimic.utils.lang_utils import LangEncoder
+from robomimic.utils.obs_utils import process_frame
+from robocasa.utils.env_utils import convert_action
+
 
 class RobomimicImageWrapper(gym.Env):
     def __init__(self, 
@@ -22,6 +27,9 @@ class RobomimicImageWrapper(gym.Env):
         self.shape_meta = shape_meta
         self.render_cache = None
         self.has_reset_before = False
+        self.lang = None
+        self.lang_emb = None
+        self.lang_encoder = LangEncoder('cpu')
         
         # setup spaces
         action_shape = shape_meta['action']['shape']
@@ -46,6 +54,12 @@ class RobomimicImageWrapper(gym.Env):
             elif key.endswith('pos'):
                 # better range?
                 min_value, max_value = -1, 1
+            elif key == LANG_EMB_KEY:
+                min_value, max_value = -100, 100
+            elif key.endswith('sin'):
+                min_value, max_value = -1, 1
+            elif key.endswith('cos'):
+                min_value, max_value = -1, 1
             else:
                 raise RuntimeError(f"Unsupported type {key}")
             
@@ -58,10 +72,30 @@ class RobomimicImageWrapper(gym.Env):
             observation_space[key] = this_space
         self.observation_space = observation_space
 
+    def process_obs(self, raw_obs):
+        """
+        Remaps keys from raw observation to keys expected by diffusion policy
+        and performs image processing (normalization + channel reordering)
+        """
+        obs_mappings = self.shape_meta["obs"]
+        policy_obs = {}
+        for policy_key, value in obs_mappings.items():
+            raw_obs_keys = value.get("lerobot_keys", None)
+            if raw_obs_keys is None:
+                continue
+            raw_obs_key = raw_obs_keys[0]
+            policy_obs[policy_key] =  raw_obs[raw_obs_key]
+            if value.get("type", "lowdim") == "rgb":
+                img = policy_obs[policy_key]
+                img_processed = process_frame(img, channel_dim=3, scale=255.)
+                policy_obs[policy_key] = img_processed
+        return policy_obs
 
     def get_observation(self, raw_obs=None):
-        if raw_obs is None:
-            raw_obs = self.env.get_observation()
+        assert raw_obs is not None, "raw_obs must be provided"
+        raw_obs = self.process_obs(raw_obs)
+        assert self.lang is not None
+        raw_obs[LANG_EMB_KEY] = self.lang_emb
         
         self.render_cache = raw_obs[self.render_obs_key]
 
@@ -75,38 +109,42 @@ class RobomimicImageWrapper(gym.Env):
         self._seed = seed
     
     def reset(self):
-        if self.init_state is not None:
-            if not self.has_reset_before:
-                # the env must be fully reset at least once to ensure correct rendering
-                self.env.reset()
-                self.has_reset_before = True
+        # if self.init_state is not None:
+        #     if not self.has_reset_before:
+        #         # the env must be fully reset at least once to ensure correct rendering
+        #         self.env.reset()
+        #         self.has_reset_before = True
 
-            # always reset to the same state
-            # to be compatible with gym
-            raw_obs = self.env.reset_to({'states': self.init_state})
-        elif self._seed is not None:
-            # reset to a specific seed
-            seed = self._seed
-            if seed in self.seed_state_map:
-                # env.reset is expensive, use cache
-                raw_obs = self.env.reset_to({'states': self.seed_state_map[seed]})
-            else:
-                # robosuite's initializes all use numpy global random state
-                np.random.seed(seed=seed)
-                raw_obs = self.env.reset()
-                state = self.env.get_state()['states']
-                self.seed_state_map[seed] = state
-            self._seed = None
-        else:
-            # random reset
-            raw_obs = self.env.reset()
+        #     # always reset to the same state
+        #     # to be compatible with gym
+        #     raw_obs = self.env.reset_to({'states': self.init_state})
+        # elif self._seed is not None:
+        #     # reset to a specific seed
+        #     seed = self._seed
+        #     if seed in self.seed_state_map:
+        #         # env.reset is expensive, use cache
+        #         raw_obs = self.env.reset_to({'states': self.seed_state_map[seed]})
+        #     else:
+        #         # robosuite's initializes all use numpy global random state
+        #         np.random.seed(seed=seed)
+        #         raw_obs = self.env.reset()
+        #         state = self.env.get_state()['states']
+        #         self.seed_state_map[seed] = state
+        #     self._seed = None
+        # else:
+        #     # random reset
+        #     raw_obs = self.env.reset()
+        raw_obs, info = self.env.reset()
+        self.lang = raw_obs["annotation.human.task_description"]
+        self.lang_emb = self.lang_encoder.get_lang_emb(self.lang).numpy()
 
         # return obs
         obs = self.get_observation(raw_obs)
         return obs
     
     def step(self, action):
-        raw_obs, reward, done, info = self.env.step(action)
+        action_converted = convert_action(action)
+        raw_obs, reward, done, truncated, info = self.env.step(action_converted)
         obs = self.get_observation(raw_obs)
         return obs, reward, done, info
     

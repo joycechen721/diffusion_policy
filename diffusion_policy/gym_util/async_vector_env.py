@@ -85,7 +85,7 @@ class AsyncVectorEnv(VectorEnv):
         action_space=None,
         shared_memory=True,
         copy=True,
-        context=None,
+        context="spawn", # default used to be None
         daemon=True,
         worker=None,
     ):

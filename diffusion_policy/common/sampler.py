@@ -135,10 +135,11 @@ class SequenceSampler:
                 # the non-loaded region should never be used
                 sample = np.full((n_data,) + input_arr.shape[1:], 
                     fill_value=np.nan, dtype=input_arr.dtype)
-                try:
-                    sample[:k_data] = input_arr[buffer_start_idx:buffer_start_idx+k_data]
-                except Exception as e:
-                    import pdb; pdb.set_trace()
+                sample[:k_data] = input_arr[buffer_start_idx:buffer_start_idx+k_data]
+                #try:
+                #    sample[:k_data] = input_arr[buffer_start_idx:buffer_start_idx+k_data]
+                #except Exception as e:
+                #    import pdb; pdb.set_trace()
             data = sample
             if (sample_start_idx > 0) or (sample_end_idx < self.sequence_length):
                 data = np.zeros(

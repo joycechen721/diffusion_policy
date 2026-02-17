@@ -1,5 +1,5 @@
 from typing import Union
-import pytorch3d.transforms as pt
+#import pytorch3d.transforms as pt
 import torch
 import numpy as np
 import functools
@@ -33,6 +33,9 @@ class RotationTransformer:
 
         forward_funcs = list()
         inverse_funcs = list()
+
+        # import pytorch3d.transforms as pt
+        import robomimic.utils.torch_utils as pt
 
         if from_rep != 'matrix':
             funcs = [

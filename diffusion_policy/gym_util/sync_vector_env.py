@@ -60,7 +60,10 @@ class SyncVectorEnv(VectorEnv):
         for env, seed in zip(self.envs, seeds):
             env.seed(seed)
 
-    def reset_wait(self):
+    def reset_wait(self, seed=None, options=None, return_info=None):
+        """
+        Soroush: added seed, options, return_info parameters
+        """
         self._dones[:] = False
         observations = []
         for env in self.envs:

@@ -221,8 +221,10 @@ class RobomimicReplayImageDataset(BaseImageDataset):
 
 
 def _convert_actions(raw_actions, abs_action, rotation_transformer):
-    actions = raw_actions
+    # actions = raw_actions[...,:7]
+    actions = raw_actions[...,:] # Soroush: changed to all action dims
     if abs_action:
+        raise NotImplementedError
         is_dual_arm = False
         if raw_actions.shape[-1] == 14:
             # dual arm
@@ -231,7 +233,7 @@ def _convert_actions(raw_actions, abs_action, rotation_transformer):
 
         pos = raw_actions[...,:3]
         rot = raw_actions[...,3:6]
-        gripper = raw_actions[...,6:]
+        gripper = raw_actions[...,6:7]
         rot = rotation_transformer.forward(rot)
         raw_actions = np.concatenate([
             pos, rot, gripper
@@ -244,7 +246,9 @@ def _convert_actions(raw_actions, abs_action, rotation_transformer):
 
 
 def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, rotation_transformer, 
-        n_workers=None, max_inflight_tasks=None):
+        n_workers=10, max_inflight_tasks=None):
+    action_key = 'actions_abs' if abs_action else 'actions'
+
     if n_workers is None:
         n_workers = multiprocessing.cpu_count()
     if max_inflight_tasks is None:
@@ -273,8 +277,10 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
         episode_ends = list()
         prev_end = 0
         for i in range(len(demos)):
+            # if f'demo_{i}' not in demos:
+            #     continue
             demo = demos[f'demo_{i}']
-            episode_length = demo['actions'].shape[0]
+            episode_length = demo[action_key].shape[0]
             episode_end = prev_end + episode_length
             prev_end = episode_end
             episode_ends.append(episode_end)
@@ -287,9 +293,11 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
         for key in tqdm(lowdim_keys + ['action'], desc="Loading lowdim data"):
             data_key = 'obs/' + key
             if key == 'action':
-                data_key = 'actions'
+                data_key = action_key
             this_data = list()
             for i in range(len(demos)):
+                # if f'demo_{i}' not in demos:
+                #     continue
                 demo = demos[f'demo_{i}']
                 this_data.append(demo[data_key][:].astype(np.float32))
             this_data = np.concatenate(this_data, axis=0)
@@ -337,6 +345,8 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
                         dtype=np.uint8
                     )
                     for episode_idx in range(len(demos)):
+                        # if f'demo_{episode_idx}' not in demos:
+                        #     continue
                         demo = demos[f'demo_{episode_idx}']
                         hdf5_arr = demo['obs'][key]
                         for hdf5_idx in range(hdf5_arr.shape[0]):
@@ -361,6 +371,136 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
 
     replay_buffer = ReplayBuffer(root)
     return replay_buffer
+
+# def process_episode_images(episode_idx, dataset_path, rgb_keys, shape_meta, episode_starts):
+#     with h5py.File(dataset_path, 'r') as file:
+#         demo = file['data'][f'demo_{episode_idx}']
+#         episode_images = {}
+        
+#         for key in rgb_keys:
+#             data_key = f'obs/{key}'
+#             shape = tuple(shape_meta['obs'][key]['shape'])
+#             c, h, w = shape
+#             hdf5_arr = demo[data_key]
+#             episode_length = hdf5_arr.shape[0]
+            
+#             episode_images[key] = np.array(hdf5_arr).reshape(episode_length, h, w, c)
+
+#         return episode_idx, episode_images, episode_length
+
+# def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, rotation_transformer, 
+#         n_workers=20, max_inflight_tasks=None):
+#     if n_workers is None:
+#         n_workers = multiprocessing.cpu_count()
+#     if max_inflight_tasks is None:
+#         max_inflight_tasks = n_workers * 5
+
+#     # parse shape_meta
+#     rgb_keys = list()
+#     lowdim_keys = list()
+#     # construct compressors and chunks
+#     obs_shape_meta = shape_meta['obs']
+#     for key, attr in obs_shape_meta.items():
+#         shape = attr['shape']
+#         type = attr.get('type', 'low_dim')
+#         if type == 'rgb':
+#             rgb_keys.append(key)
+#         elif type == 'low_dim':
+#             lowdim_keys.append(key)
+    
+#     root = zarr.group(store)
+#     data_group = root.require_group('data', overwrite=True)
+#     meta_group = root.require_group('meta', overwrite=True)
+
+#     with h5py.File(dataset_path) as file:
+#         # count total steps
+#         demos = file['data']
+#         episode_ends = list()
+#         prev_end = 0
+#         # sampled_indices = np.random.choice(len(demos), 20, replace=False)
+#         # sampled_indices = list(range(20))
+#         for i in range(len(demos)):
+#         # for i in sampled_indices:
+#             demo = demos[f'demo_{i}']
+#             episode_length = demo['actions'].shape[0]
+#             episode_end = prev_end + episode_length
+#             prev_end = episode_end
+#             episode_ends.append(episode_end)
+#         n_steps = episode_ends[-1]
+#         episode_starts = [0] + episode_ends[:-1]
+#         _ = meta_group.array('episode_ends', episode_ends, 
+#             dtype=np.int64, compressor=None, overwrite=True)
+
+#         # save lowdim data
+#         for key in tqdm(lowdim_keys + ['action'], desc="Loading lowdim data"):
+#             data_key = 'obs/' + key
+#             if key == 'action':
+#                 data_key = 'actions'
+#             this_data = list()
+#             for i in range(len(demos)):
+#             # for i in sampled_indices:
+#                 demo = demos[f'demo_{i}']
+#                 this_data.append(demo[data_key][:].astype(np.float32))
+#             this_data = np.concatenate(this_data, axis=0)
+#             if key == 'object_type':
+#                 # Create the one-hot encoding using np.eye (5 represents the number of categories: 0 to 4)
+#                 """
+#                 For arr = np.array([2., 4., 0.]), the resulting one-hot encoding would be:
+#                 array([[0., 0., 1., 0., 0.],   # 2 -> [0, 0, 1, 0, 0]
+#                         [0., 0., 0., 0., 1.],   # 4 -> [0, 0, 0, 0, 1]
+#                         [1., 0., 0., 0., 0.]])  # 0 -> [1, 0, 0, 0, 0]
+#                 """
+#                 this_data = np.eye(5, dtype=np.float32)[this_data.astype(int)]
+                
+#             elif key == 'action':
+#                 this_data = _convert_actions(
+#                     raw_actions=this_data,
+#                     abs_action=abs_action,
+#                     rotation_transformer=rotation_transformer,
+#                     # is_humanoid="humanoid" in dataset_path
+#                 )
+#                 assert this_data.shape == (n_steps,) + tuple(shape_meta['action']['shape']), f"{this_data.shape} != {(n_steps,) + tuple(shape_meta['action']['shape'])}"
+#             else:
+#                 assert this_data.shape == (n_steps,) + tuple(shape_meta['obs'][key]['shape'])
+#             _ = data_group.array(
+#                 name=key,
+#                 data=this_data,
+#                 shape=this_data.shape,
+#                 chunks=this_data.shape,
+#                 compressor=None,
+#                 dtype=this_data.dtype
+#             )
+
+#         with multiprocessing.Pool(processes=n_workers) as pool:
+#             image_tasks = [(i, dataset_path, rgb_keys, shape_meta, episode_starts) for i in range(len(demos))]
+#             # image_tasks = [(i, dataset_path, rgb_keys, shape_meta, episode_starts) for i in sampled_indices]
+            
+#             with tqdm(total=n_steps*len(rgb_keys), desc="Loading image data", mininterval=1.0) as pbar:
+#                 for episode_idx, episode_images, episode_length in pool.starmap(process_episode_images, image_tasks):
+#                     for key in rgb_keys:
+#                         shape = tuple(shape_meta['obs'][key]['shape'])
+#                         c, h, w = shape
+#                         this_compressor = Jpeg2k(level=50)
+                        
+#                         if key not in data_group:
+#                             img_arr = data_group.require_dataset(
+#                                 name=key,
+#                                 shape=(n_steps, h, w, c),
+#                                 chunks=(1, h, w, c),
+#                                 compressor=this_compressor,
+#                                 dtype=np.uint8
+#                             )
+#                         else:
+#                             img_arr = data_group[key]
+                        
+#                         start_idx = episode_starts[episode_idx]
+#                         end_idx = start_idx + episode_length
+#                         img_arr[start_idx:end_idx] = episode_images[key]
+                    
+#                     pbar.update(episode_length * len(rgb_keys))
+
+#     replay_buffer = ReplayBuffer(root)
+#     return replay_buffer
 
 def normalizer_from_stat(stat):
     max_abs = np.maximum(stat['max'].max(), np.abs(stat['min']).max())
