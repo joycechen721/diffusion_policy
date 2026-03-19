@@ -1,5 +1,5 @@
-from diffusion_policy.model.common.normalizer import SingleFieldLinearNormalizer
-from diffusion_policy.common.pytorch_util import dict_apply, dict_apply_reduce, dict_apply_split
+from diffusion_policy.diffusion_policy.model.common.normalizer import SingleFieldLinearNormalizer
+from diffusion_policy.diffusion_policy.common.pytorch_util import dict_apply, dict_apply_reduce, dict_apply_split
 import numpy as np
 
 

@@ -28,7 +28,7 @@ from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
 from diffusion_policy.common.json_logger import JsonLogger
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
-from diffusers.training_utils import EMAModel
+from diffusion_policy.model.diffusion.ema_model import EMAModel
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
@@ -105,12 +105,13 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                 cfg.ema,
                 model=self.ema_model)
 
-        # configure env runner
-        env_runner: BaseLowdimRunner
-        env_runner = hydra.utils.instantiate(
-            cfg.task.env_runner,
-            output_dir=self.output_dir)
-        assert isinstance(env_runner, BaseLowdimRunner)
+        # configure env runner (optional)
+        env_runner: BaseLowdimRunner | None = None
+        if cfg.training.rollout_every is not None:
+            env_runner = hydra.utils.instantiate(
+                cfg.task.env_runner,
+                output_dir=self.output_dir)
+            assert isinstance(env_runner, BaseLowdimRunner)
 
         # configure logging
         wandb_run = wandb.init(
@@ -213,7 +214,8 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                 policy.eval()
 
                 # run rollout
-                if (self.epoch % cfg.training.rollout_every) == 0:
+                if (cfg.training.rollout_every is not None) and ((self.epoch % cfg.training.rollout_every) == 0):
+                    assert env_runner is not None
                     runner_log = env_runner.run(policy)
                     # log all
                     step_log.update(runner_log)

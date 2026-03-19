@@ -1,13 +1,13 @@
 defaults:
   - _self_
-  - task: lift_image_abs
+  - task: robocasa/OpenCabinet
 
-name: train_diffusion_transformer_hybrid
+name: train_diffusion_lowdim_m2
 _target_: diffusion_policy.workspace.train_diffusion_transformer_hybrid_workspace.TrainDiffusionTransformerHybridWorkspace
 
 task_name: ${task.name}
 shape_meta: ${task.shape_meta}
-exp_name: "default"
+exp_name: "m2_optimized_cpu_transformer"
 
 horizon: 10
 n_obs_steps: 2
@@ -18,42 +18,49 @@ past_action_visible: False
 keypoint_visible_rate: 1.0
 obs_as_cond: True
 
+# ============= Dimension Definitions =============
+obs_dim: 16
+action_dim: 12
+
+# ============= M2-OPTIMIZED POLICY =============
+# KEY CHANGES: Smaller transformer, fewer diffusion steps
 policy:
-  _target_: diffusion_policy.policy.diffusion_transformer_hybrid_image_policy.DiffusionTransformerHybridImagePolicy
+    _target_: diffusion_policy.policy.diffusion_transformer_hybrid_image_policy.DiffusionTransformerHybridImagePolicy
 
-  shape_meta: ${shape_meta}
-  
-  noise_scheduler:
-    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
-    num_train_timesteps: 100
-    beta_start: 0.0001
-    beta_end: 0.02
-    beta_schedule: squaredcos_cap_v2
-    variance_type: fixed_small # Yilun's paper uses fixed_small_log instead, but easy to cause Nan
-    clip_sample: True # required when predict_epsilon=False
-    prediction_type: epsilon # or sample
+    shape_meta: ${shape_meta}
+    
+    noise_scheduler:
+      _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+      num_train_timesteps: 50  # REDUCED from 100 (fewer timesteps = fewer denoising steps)
+      beta_start: 0.0001
+      beta_end: 0.02
+      beta_schedule: squaredcos_cap_v2
+      variance_type: fixed_small
+      clip_sample: True
+      prediction_type: epsilon
 
-  horizon: ${horizon}
-  n_action_steps: ${eval:'${n_action_steps}+${n_latency_steps}'}
-  n_obs_steps: ${n_obs_steps}
-  num_inference_steps: 100
-
-  crop_shape: [224, 224]
-  obs_encoder_group_norm: True
-  eval_fixed_crop: True
-
-  n_layer: 12
-  n_cond_layers: 4  # >0: use transformer encoder for cond, otherwise use MLP
-  n_head: 8
-  n_emb: 512
-  p_drop_emb: 0.0
-  p_drop_attn: 0.3
-  causal_attn: True
-  time_as_cond: True # if false, use BERT like encoder only arch, time as input
-  obs_as_cond: ${obs_as_cond}
-
-  # scheduler.step params
-  # predict_epsilon: True
+    horizon: ${horizon}
+    n_action_steps: ${n_action_steps}
+    n_obs_steps: ${n_obs_steps}
+    num_inference_steps: 20  # REDUCED from 100 (huge speedup for inference)
+    
+    # Transformer architecture - MUCH SMALLER
+    n_layer: 4  # REDUCED from 8 (half the layers)
+    n_head: 2  # REDUCED from 4 (fewer attention heads)
+    n_emb: 128  # REDUCED from 256 (smaller embeddings)
+    p_drop_emb: 0.1  # Slight regularization
+    p_drop_attn: 0.2  # REDUCED from 0.3 (less aggressive dropout)
+    causal_attn: True
+    time_as_cond: True
+    
+    # Vision backbone - SMALLEST
+    vision_backbone: "resnet18"  # Smallest ResNet
+    crop_shape: [64, 64]  # REDUCED from (76, 76) (smaller crops = faster)
+    obs_encoder_group_norm: True  # ENABLED (better for CPU)
+    eval_fixed_crop: False
+    
+    obs_as_cond: True
+    pred_action_steps_only: False
 
 ema:
   _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
@@ -63,19 +70,20 @@ ema:
   min_value: 0.0
   max_value: 0.9999
 
+# ============= M2-OPTIMIZED DATALOADER =============
+# KEY CHANGES: Smaller batches, fewer workers
 dataloader:
-  batch_size: 192
-  num_workers: 64
+  batch_size: 16  # REDUCED from 32 (huge memory savings on CPU)
+  num_workers: 1  # REDUCED from 2 (M2 only has 8 cores total, most are efficiency cores)
   shuffle: True
-  pin_memory: True
+  pin_memory: False
   persistent_workers: False
-  # persistent_workers: True # set it to True based on recommendation from perplexity online
 
 val_dataloader:
-  batch_size: 192
-  num_workers: 64
+  batch_size: 16  # REDUCED from 32
+  num_workers: 1
   shuffle: False
-  pin_memory: True
+  pin_memory: False
   persistent_workers: False
 
 optimizer:
@@ -84,38 +92,36 @@ optimizer:
   learning_rate: 1.0e-4
   betas: [0.9, 0.95]
 
+# ============= M2-OPTIMIZED TRAINING =============
+# KEY CHANGES: Fewer steps per epoch, more aggressive sampling intervals
 training:
-  device: "cuda:0"
+  device: "mps"
   seed: 42
   debug: False
   resume: False
   # optimization
   lr_scheduler: cosine
-  # Transformer needs LR warmup
-  lr_warmup_steps: 1000
-  num_epochs: 1000
+  lr_warmup_steps: 100  # REDUCED from 500 (fewer warmup steps)
+  num_epochs: 50
   gradient_accumulate_every: 1
-  # EMA destroys performance when used with BatchNorm
-  # replace BatchNorm with GroupNorm.
   use_ema: True
   # training loop control
-  # in epochs
-  rollout_every: null
-  checkpoint_every: 100
-  val_every: 50
-  sample_every: 50
-  # steps per epoch
-  max_train_steps: 500
-  max_val_steps: null
+  rollout_every: null  # Disable rollouts on CPU (they're slow)
+  checkpoint_every: 10  # INCREASED from 50 (checkpoint more frequently but you won't run many epochs)
+  val_every: 5  # INCREASED from 25 (validate more often with fewer steps)
+  sample_every: 5  # INCREASED from 25 (sample more often)
+  # steps per epoch - THIS IS KEY
+  max_train_steps: 50  # REDUCED from 500 (10x fewer training steps per epoch!)
+  max_val_steps: 10  # REDUCED from null (limit validation)
   # misc
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_bs192
+  project: diffusion_policy_m2_optimized
   resume: False
   mode: online
   name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
-  tags: ["${name}", "${task_name}", "${exp_name}"]
+  tags: ["${name}", "${task_name}", "${exp_name}", "m2", "cpu", "optimized"]
   id: null
   group: null
 
@@ -123,7 +129,7 @@ checkpoint:
   topk:
     monitor_key: test_mean_score
     mode: max
-    k: 20
+    k: 3  # REDUCED from 5 (save fewer checkpoints)
     format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
   save_last_ckpt: True
   save_last_snapshot: False

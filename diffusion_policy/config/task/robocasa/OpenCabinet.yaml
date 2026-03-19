@@ -1,0 +1,83 @@
+name: OpenCabinet
+
+shape_meta: &shape_meta
+  obs:
+    base_pos:
+      shape: [3]
+      type: low_dim
+      lerobot_keys: ['state.base_position']
+
+    base_quat:
+      shape: [4]
+      type: low_dim
+      lerobot_keys: ['state.base_rotation']
+
+    robot0_base_to_eef_pos:
+      shape: [3]
+      type: low_dim
+      lerobot_keys: ['state.end_effector_position_relative']
+
+    robot0_base_to_eef_quat:
+      shape: [4]
+      type: low_dim
+      lerobot_keys: ['state.end_effector_rotation_relative']
+
+    robot0_gripper_qpos:
+      shape: [2]
+      type: low_dim
+      lerobot_keys: ['state.gripper_qpos']
+
+    handle_pos:
+      shape: [3]
+      type: low_dim
+      lerobot_keys: ['state.handle_pos']
+
+    handle_to_eef_pos:
+      shape: [3]
+      type: low_dim
+      lerobot_keys: ['state.handle_to_eef_pos']
+
+    door_openness:
+      shape: [1]
+      type: low_dim
+      lerobot_keys: ['state.door_openness']
+
+  # Action: 12D packed into "action" key
+  # base_motion (4) + control_mode (1) + eef_pos (3) + eef_rot (3) + gripper (1) = 12
+  action: 
+    shape: [12]
+    lerobot_keys: ['action.end_effector_position', 'action.end_effector_rotation', 'action.gripper_close', 'action.base_motion', 'action.control_mode',]
+
+obs_dim: 23
+action_dim: 12
+
+abs_action: &abs_action False
+
+env_runner:
+  _target_: diffusion_policy.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+  dataset_path: /Users/joycechen/classes/188_robotics/cs188-cabinet-door-project/robocasa/datasets/v1.0/pretrain/atomic/OpenCabinet/20250819/lerobot
+  shape_meta: *shape_meta
+
+  n_train: 0
+  n_test: 50
+  max_steps: 600
+
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+
+dataset:
+  _target_: diffusion_policy.dataset.lerobot_dataset.LerobotCotrainingDataset
+  shape_meta: *shape_meta
+
+  dataset_soup: open_cabinet
+
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  n_obs_steps: ${dataset_obs_steps}
+
+  abs_action: *abs_action
+  rotation_rep: rotation_6d
+  use_cache: False
+  seed: 42
+  val_ratio: 0.02

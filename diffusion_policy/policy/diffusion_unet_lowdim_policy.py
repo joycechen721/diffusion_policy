@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from einops import rearrange, reduce
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
-from diffusion_policy.model.common.normalizer import LinearNormalizer
-from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
-from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
-from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
+from diffusion_policy.diffusion_policy.model.common.normalizer import LinearNormalizer
+from diffusion_policy.diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 
 class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
     def __init__(self, 
@@ -184,8 +184,9 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         # normalize input
         assert 'valid_mask' not in batch
         nbatch = self.normalizer.normalize(batch)
-        obs = nbatch['obs']
-        action = nbatch['action']
+        device = self.device
+        obs = nbatch['obs'].to(device)
+        action = nbatch['action'].to(device)
 
         # handle different ways of passing observation
         local_cond = None
@@ -213,13 +214,15 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             condition_mask = torch.zeros_like(trajectory, dtype=torch.bool)
         else:
             condition_mask = self.mask_generator(trajectory.shape)
+            if condition_mask.device != trajectory.device:
+                condition_mask = condition_mask.to(trajectory.device)
 
         # Sample noise that we'll add to the images
         noise = torch.randn(trajectory.shape, device=trajectory.device)
         bsz = trajectory.shape[0]
         # Sample a random timestep for each image
         timesteps = torch.randint(
-            0, self.noise_scheduler.config.num_train_timesteps, 
+            0, self.noise_scheduler.config.num_train_timesteps,
             (bsz,), device=trajectory.device
         ).long()
         # Add noise to the clean images according to the noise magnitude at each timestep
