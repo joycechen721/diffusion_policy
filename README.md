@@ -3,6 +3,9 @@
 This is the Diffusion Policy fork repo for running RoboCasa benchmark experiments.
 This fork is based on the original Diffusion Policy code, hosted at [https://github.com/real-stanford/diffusion_policy](https://github.com/real-stanford/diffusion_policy).
 
+## Modifications for CS188
+We modify files in LeRobot dataset configurations in `diffusion_policy/config` to process the training data into a lower state dimension. We specifically use the `diffusion_policy/config/train_diffusion_unet_lowdim.yaml` configuration to train our policy.
+
 ## Recommended system specs
 For training we recommend a GPU with at least 24 Gb of memory, but 48 Gb+ is prefered.
 For inference we recommend a GPU with at least 8 Gb of memory.
